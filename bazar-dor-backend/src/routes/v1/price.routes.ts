@@ -11,6 +11,8 @@ const router = express.Router();
 router.route('/').get(priceController.getPrices);
 router.route('/basket').get(priceController.getBasket);
 router.route('/heatmap').get(priceController.getHeatmap);
+router.route('/home-summary').get(priceController.getHomeSummary);
+router.route('/market-index').get(priceController.getMarketIndex);
 router.route('/history/:productId').get(priceController.getPriceHistory);
 router.route('/:priceId').get(priceController.getPrice);
 

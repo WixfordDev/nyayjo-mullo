@@ -150,6 +150,50 @@ const getPriceHistory = catchAsync(async (req: Request, res: Response) => {
   );
 });
 
+const getHomeSummary = catchAsync(async (req: Request, res: Response) => {
+  const { lat, lng, radius, bazarId } = req.query as {
+    lat?: string; lng?: string; radius?: string; bazarId?: string;
+  };
+
+  const result = await priceService.getHomeSummary({
+    lat:     lat     ? parseFloat(lat)     : undefined,
+    lng:     lng     ? parseFloat(lng)     : undefined,
+    radius:  radius  ? parseFloat(radius)  : undefined,
+    bazarId: bazarId || undefined,
+  });
+
+  res.status(httpStatus.OK).json(
+    response({
+      message:    'Home summary retrieved successfully',
+      status:     'OK',
+      statusCode: httpStatus.OK,
+      data:       result,
+    }),
+  );
+});
+
+const getMarketIndex = catchAsync(async (req: Request, res: Response) => {
+  const { lat, lng, radius, bazarId } = req.query as {
+    lat?: string; lng?: string; radius?: string; bazarId?: string;
+  };
+
+  const result = await priceService.getMarketIndex({
+    lat:     lat     ? parseFloat(lat)     : undefined,
+    lng:     lng     ? parseFloat(lng)     : undefined,
+    radius:  radius  ? parseFloat(radius)  : undefined,
+    bazarId: bazarId || undefined,
+  });
+
+  res.status(httpStatus.OK).json(
+    response({
+      message:    'Market index retrieved successfully',
+      status:     'OK',
+      statusCode: httpStatus.OK,
+      data:       result,
+    }),
+  );
+});
+
 export {
   createPrice,
   getPrices,
@@ -160,4 +204,6 @@ export {
   getBasket,
   getHeatmap,
   getPriceHistory,
+  getHomeSummary,
+  getMarketIndex,
 };

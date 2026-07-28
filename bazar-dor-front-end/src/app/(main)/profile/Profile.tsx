@@ -103,11 +103,12 @@ export function Profile() {
 
   // ── Budget calculations ──────────────────────────────────
   useEffect(() => {
-    const stored = localStorage.getItem(BUDGET_KEY);
+    if (!myUserId) return;
+    const stored = localStorage.getItem(`${BUDGET_KEY}_${myUserId}`);
     if (stored) setBudget(Number(stored));
-    setExpenses(loadExpenses());
-    try { setSavings(JSON.parse(localStorage.getItem(SAVINGS_KEY) || '[]')); } catch {}
-  }, []);
+    try { setExpenses(JSON.parse(localStorage.getItem(`${EXPENSES_KEY}_${myUserId}`) || '[]')); } catch { setExpenses([]); }
+    try { setSavings(JSON.parse(localStorage.getItem(`${SAVINGS_KEY}_${myUserId}`) || '[]')); } catch {}
+  }, [myUserId]);
 
   const now       = new Date();
   const thisMonth = monthKey(now);
@@ -142,7 +143,8 @@ export function Profile() {
     if (!amt || amt <= 0) return;
     const updated = [...expenses, { amount: amt, note: expenseNote || 'বাজার খরচ', date: new Date().toISOString() }];
     setExpenses(updated);
-    saveExpenses(updated);
+    const expKey = myUserId ? `${EXPENSES_KEY}_${myUserId}` : EXPENSES_KEY;
+    try { localStorage.setItem(expKey, JSON.stringify(updated)); } catch {}
     setExpenseInput('');
     setExpenseNote('');
     setShowAddExpense(false);

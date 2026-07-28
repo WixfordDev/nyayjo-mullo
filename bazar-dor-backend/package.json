@@ -10,6 +10,7 @@
     "seed": "ts-node src/utils/seeder.ts",
     "seed:bazars": "ts-node src/scripts/seedBangladeshBazars.ts",
     "seed:bazars:dry": "DRY_RUN=true ts-node src/scripts/seedBangladeshBazars.ts",
+    "seed:market-index": "ts-node src/scripts/seedMarketIndexPrices.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Sahinur Islam",

@@ -14,12 +14,15 @@ interface PriceDocument extends mongoose.Document {
   price: number;
   visitType: "physical" | "online";
   photoUrl: string;
+  note: string;
+  unit: string;
   upvotes: number;
   downvotes: number;
   voters: VoterEntry[];
   confidenceScore: number;
   isVerified: boolean;
   isStockOut: boolean;
+  isSeed: boolean;
   expiresAt: Date;
 }
 
@@ -59,6 +62,17 @@ const priceSchema = new mongoose.Schema<PriceDocument, PriceModel>(
       type: String,
       default: "",
     },
+    note: {
+      type: String,
+      default: "",
+      maxlength: 100,
+      trim: true,
+    },
+    unit: {
+      type: String,
+      enum: ["kg", "g", "piece", "dozen", "liter", "ml", "packet"],
+      default: "kg",
+    },
     upvotes: {
       type: Number,
       default: 0,
@@ -87,6 +101,12 @@ const priceSchema = new mongoose.Schema<PriceDocument, PriceModel>(
       default: false,
     },
     isStockOut: {
+      type: Boolean,
+      default: false,
+    },
+    // Placeholder data inserted by the market-index seed script.
+    // Automatically ignored for a given day/item as soon as a real submission exists for it.
+    isSeed: {
       type: Boolean,
       default: false,
     },

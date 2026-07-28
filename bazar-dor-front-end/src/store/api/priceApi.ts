@@ -46,6 +46,20 @@ export const priceApi = baseApi.injectEndpoints({
       query: (priceId: string) => ({ url: `/prices/${priceId}`, method: 'DELETE' }),
       invalidatesTags: ['Price'],
     }),
+    getHomeSummary: builder.query({
+      query: (params?: { lat?: number; lng?: number; radius?: number; bazarId?: string }) => ({
+        url: '/prices/home-summary',
+        params,
+      }),
+      providesTags: ['Price'],
+    }),
+    getMarketIndex: builder.query({
+      query: (params?: { lat?: number; lng?: number; radius?: number; bazarId?: string }) => ({
+        url: '/prices/market-index',
+        params,
+      }),
+      providesTags: ['Price'],
+    }),
   }),
 });
 
@@ -58,4 +72,6 @@ export const {
   useVotePriceMutation,
   useMarkStockOutMutation,
   useDeletePriceMutation,
+  useGetHomeSummaryQuery,
+  useGetMarketIndexQuery,
 } = priceApi;

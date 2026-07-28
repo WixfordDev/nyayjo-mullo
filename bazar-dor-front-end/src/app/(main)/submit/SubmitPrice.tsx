@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  MapPin, ShoppingBag, CheckCircle2, Navigation, Camera, X,
+  Bell, Info, ChevronDown, FileText, ListChecks, Search,
+} from 'lucide-react';
 import Image from 'next/image';
-import { MapPin, ShoppingBag, CheckCircle2, Navigation, Camera, X, Store, Smartphone } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGetProductsQuery } from '../../../store/api/productApi';
@@ -11,6 +14,12 @@ import { useSubmitPriceMutation } from '../../../store/api/priceApi';
 import { useAppSelector } from '../../../store/hooks';
 import { useUserLocation } from '../../../hooks/useUserLocation';
 import { distanceKm, formatDistance } from '../../../lib/distance';
+
+const UNIT_LABELS: Record<string, string> = {
+  kg: 'কেজি', g: 'গ্রাম', piece: 'পিস', dozen: 'ডজন',
+  liter: 'লিটার', ml: 'মিলি', packet: 'প্যাকেট',
+};
+const unitLabel = (u?: string) => (u && UNIT_LABELS[u]) || u || 'ইউনিট';
 
 export function SubmitPrice() {
   const searchParams = useSearchParams();
@@ -46,12 +55,17 @@ export function SubmitPrice() {
     bazarId: searchParams.get('bazar_id') || '',
     productId: searchParams.get('product_id') || '',
     price: '',
-    visitType: 'physical' as 'physical' | 'online',
+    unit: 'kg',
+    note: '',
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [productDropdownOpen, setProductDropdownOpen] = useState(false);
+  const [bazarDropdownOpen, setBazarDropdownOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+  const [bazarSearch, setBazarSearch] = useState('');
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -60,6 +74,12 @@ export function SubmitPrice() {
       if (saved) setFormData(prev => ({ ...prev, bazarId: saved }));
     }
   }, []);
+
+  // Sync unit selector to the newly-picked product's default unit
+  useEffect(() => {
+    const product = products.find((p: any) => p._id === formData.productId);
+    if (product?.unit) setFormData(prev => ({ ...prev, unit: product.unit }));
+  }, [formData.productId, products]);
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,12 +107,15 @@ export function SubmitPrice() {
       fd.append('productId', formData.productId);
       fd.append('bazarId', formData.bazarId);
       fd.append('price', formData.price);
-      fd.append('visitType', formData.visitType);
+      fd.append('unit', formData.unit || selectedProduct?.unit || 'kg');
+      fd.append('visitType', 'physical');
+      if (formData.note) fd.append('note', formData.note);
       if (photoFile) fd.append('photo', photoFile);
       await submitPrice(fd).unwrap();
       setSubmitted(true);
       setPhotoFile(null);
       setPhotoPreview(null);
+      setFormData(p => ({ ...p, note: '' }));
     } catch (err: any) {
       setError(err?.data?.message || 'সাবমিট ব্যর্থ হয়েছে');
     }
@@ -100,6 +123,21 @@ export function SubmitPrice() {
 
   const selectedProduct = products.find((p: any) => p._id === formData.productId);
   const selectedBazar   = bazars.find((b: any) => b._id === formData.bazarId);
+
+  const filteredProducts = productSearch
+    ? products.filter((p: any) =>
+        (p.nameBn || '').includes(productSearch) ||
+        (p.name || '').toLowerCase().includes(productSearch.toLowerCase())
+      )
+    : products;
+
+  const filteredBazars = bazarSearch
+    ? bazars.filter((b: any) =>
+        (b.nameBn || '').includes(bazarSearch) ||
+        (b.name || '').toLowerCase().includes(bazarSearch.toLowerCase()) ||
+        (b.area || '').toLowerCase().includes(bazarSearch.toLowerCase())
+      )
+    : bazars;
 
   const card = 'bg-white rounded-3xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.05)] p-5';
 
@@ -143,90 +181,121 @@ export function SubmitPrice() {
   return (
     <div className="max-w-2xl mx-auto pb-16">
 
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-extrabold text-[#064E3B] tracking-tight">দাম যোগ করুন</h1>
-        <p className="text-slate-400 text-sm mt-1">সঠিক বাজার দাম শেয়ার করে কমিউনিটিকে সাহায্য করুন</p>
+      {/* ── Page header ── */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-extrabold text-[#064E3B] leading-tight">দামের তথ্য যোগ করুন</h1>
+          <p className="text-[11px] text-slate-400 mt-0.5 truncate">পণ্যের সঠিক দাম দিন ও বাজার আপডেটে অবদান রাখুন</p>
+        </div>
+        <Link href="/alerts"
+          className="relative w-10 h-10 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
+          <Bell className="w-4.5 h-4.5 text-slate-600" />
+          <span className="absolute top-2 right-2.5 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+        </Link>
+        <button type="button" title="দাম যাচাই সম্পর্কে তথ্য"
+          className="w-10 h-10 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
+          <Info className="w-4.5 h-4.5 text-slate-600" />
+        </button>
+      </div>
+
+      {/* ── Intro banner ── */}
+      <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 flex items-center gap-3 mb-4">
+        <div className="w-11 h-11 bg-emerald-500 rounded-2xl flex items-center justify-center shrink-0">
+          <ShoppingBag className="w-5 h-5 text-white" strokeWidth={2} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-emerald-900">সঠিক দাম দিন, বাজার জানুন</p>
+          <p className="text-[11px] text-emerald-600 mt-0.5">আপনাদের দেওয়া তথ্য কমিউনিটির কাছে সাহায্য করে</p>
+        </div>
+        <div className="flex flex-col gap-1.5 shrink-0">
+          <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center shadow-sm">
+            <ListChecks className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+          </div>
+          <div className="w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center text-[11px] font-extrabold text-white shadow-sm">৳</div>
+        </div>
       </div>
 
       {error && (
-        <div className="mb-5 px-4 py-3 bg-rose-50 border border-rose-100 rounded-2xl text-sm text-rose-600 font-medium flex items-center gap-2">
+        <div className="mb-4 px-4 py-3 bg-rose-50 border border-rose-100 rounded-2xl text-sm text-rose-600 font-medium flex items-center gap-2">
           <span>⚠️</span>{error}
         </div>
       )}
 
       <form onSubmit={handleSubmit}>
-        {/*
-          4 cards as direct grid children:
-          Row 1 → বাজার (col 1)  |  দাম+ভিজিট (col 2)
-          Row 2 → পণ্য   (col 1)  |  প্রমাণ ছবি (col 2)
-          CSS grid ensures same-row cards start at the same vertical position.
-        */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
 
-          {/* ── ROW 1, COL 1 — বাজার নির্বাচন ── */}
+          {/* ── বাজার নির্বাচন ── */}
           <div className={`${card} order-1`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center shrink-0">
-                  <MapPin className="w-4 h-4 text-orange-500" strokeWidth={2.5} />
+                <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-blue-500" strokeWidth={2.5} />
                 </div>
                 <div>
                   <p className="font-bold text-slate-800 text-sm leading-none">বাজার নির্বাচন</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">কোন বাজারে দেখেছেন?</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">কোন বাজারের দাম দিচ্ছেন?</p>
                 </div>
               </div>
               {userLocation ? (
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full flex items-center gap-1 shrink-0">
-                  <Navigation className="w-3 h-3" /> কাছের বাজার
+                <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1 shrink-0">
+                  <Navigation className="w-3.5 h-3.5" /> কাছের বাজার
                 </span>
               ) : (
                 <button type="button" onClick={refreshLocation}
-                  className="text-[10px] font-bold text-blue-500 bg-blue-50 border border-blue-100 px-2 py-1 rounded-full flex items-center gap-1 shrink-0 active:scale-95 transition-transform">
-                  <Navigation className="w-3 h-3" /> লোকেশন দিন
+                  className="text-[11px] font-bold text-blue-500 flex items-center gap-1 shrink-0 active:scale-95 transition-transform">
+                  <Navigation className="w-3.5 h-3.5" /> লোকেশন দিন
                 </button>
               )}
             </div>
 
             {loadingBazars ? (
-              <div className="space-y-2">
-                <div className="h-11 bg-slate-100 rounded-xl animate-pulse" />
-                <div className="flex gap-2">{[1,2,3].map(i => <div key={i} className="h-8 flex-1 bg-slate-100 rounded-xl animate-pulse" />)}</div>
-              </div>
+              <div className="h-12 bg-slate-100 rounded-xl animate-pulse" />
             ) : (
-              <>
-                <select value={formData.bazarId}
-                  onChange={(e) => setFormData(p => ({ ...p, bazarId: e.target.value }))}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 text-slate-700 font-semibold text-sm transition-all">
-                  <option value="">বাজার বেছে নিন</option>
-                  {bazars.map((b: any) => {
-                    const dist = userLocation ? formatDistance(distanceKm(userLocation.lat, userLocation.lng, b.lat, b.lng)) : null;
-                    return (
-                      <option key={b._id} value={b._id}>
-                        {b.nameBn || b.name}{b.area ? ` — ${b.area}` : ''}{dist ? ` (${dist})` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
+              <div className="relative">
+                <button type="button" onClick={() => setBazarDropdownOpen(o => !o)}
+                  className="w-full flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 active:scale-[0.99] transition-transform">
+                  <span className="flex-1 min-w-0 text-left">
+                    {selectedBazar ? (
+                      <span className="block text-sm font-semibold text-slate-700 truncate">
+                        {selectedBazar.nameBn || selectedBazar.name}{selectedBazar.area ? ` — ${selectedBazar.area}` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-400">বাজার বেছে নিন</span>
+                    )}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${bazarDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-                {userLocation && bazars.length > 0 && (
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                    {bazars.slice(0, 3).map((b: any) => {
-                      const dist = distanceKm(userLocation.lat, userLocation.lng, b.lat, b.lng);
-                      const isSel = formData.bazarId === b._id;
-                      return (
-                        <button key={b._id} type="button"
-                          onClick={() => setFormData(p => ({ ...p, bazarId: b._id }))}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
-                            isSel ? 'bg-[#064E3B] text-white border-[#064E3B]' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-emerald-300'
-                          }`}>
-                          🏪 {b.nameBn || b.name}
-                          <span className={isSel ? 'text-emerald-300' : 'text-emerald-500 font-extrabold'}>{formatDistance(dist)}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                {bazarDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setBazarDropdownOpen(false)} />
+                    <div className="absolute left-0 right-0 top-full mt-2 z-40 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                      <div className="relative p-2 border-b border-slate-100">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input type="text" value={bazarSearch} autoFocus
+                          onChange={(e) => setBazarSearch(e.target.value)}
+                          placeholder="বাজার খুঁজুন..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-sm outline-none focus:border-emerald-400" />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {filteredBazars.length === 0 ? (
+                          <p className="text-center text-xs text-slate-400 py-4">কোনো বাজার পাওয়া যায়নি</p>
+                        ) : filteredBazars.map((b: any) => {
+                          const dist = userLocation ? formatDistance(distanceKm(userLocation.lat, userLocation.lng, b.lat, b.lng)) : null;
+                          return (
+                            <button key={b._id} type="button"
+                              onClick={() => { setFormData(f => ({ ...f, bazarId: b._id })); setBazarDropdownOpen(false); setBazarSearch(''); }}
+                              className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left">
+                              <span className="flex-1 min-w-0 text-sm font-semibold text-slate-700 truncate">
+                                {b.nameBn || b.name}{b.area ? ` — ${b.area}` : ''}
+                              </span>
+                              {dist && <span className="text-[11px] font-bold text-emerald-500 shrink-0">{dist}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
                 )}
 
                 {selectedBazar && (
@@ -235,59 +304,12 @@ export function SubmitPrice() {
                     <span className="text-xs font-semibold text-emerald-700 truncate">{selectedBazar.nameBn || selectedBazar.name}</span>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
 
-          {/* ── ROW 1, COL 2 — দাম + কোথায় (desktop only for কোথায়) ── */}
+          {/* ── পণ্য নির্বাচন ── */}
           <div className={`${card} order-2`}>
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                <span className="text-emerald-600 font-extrabold text-sm leading-none">৳</span>
-              </div>
-              <div>
-                <p className="font-bold text-slate-800 text-sm leading-none">দাম লিখুন</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">প্রতি ইউনিটের বাজার দাম</p>
-              </div>
-            </div>
-
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-black text-slate-200 select-none leading-none pointer-events-none">৳</span>
-              <input type="number" value={formData.price}
-                onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
-                placeholder="০" min="1" required inputMode="numeric"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 text-slate-900 font-black text-3xl tracking-tight transition-all" />
-            </div>
-            <p className="text-[11px] text-slate-400 font-medium mt-1.5 pl-1">
-              {selectedProduct ? `প্রতি ${selectedProduct.unit}` : 'প্রতি ইউনিট'}
-            </p>
-
-            {/* কোথায় — desktop only (mobile has separate card below পণ্য) */}
-            <div className="hidden lg:block mt-4">
-              <div className="border-t border-slate-100 mb-4" />
-              <p className="font-bold text-slate-700 text-sm mb-3">কোথা থেকে দেখেছেন?</p>
-              <div className="flex gap-2.5">
-                {[
-                  { value: 'physical', Icon: Store, label: 'সরাসরি বাজার' },
-                  { value: 'online',   Icon: Smartphone, label: 'অনলাইন' },
-                ].map(({ value, Icon, label }) => (
-                  <button key={value} type="button"
-                    onClick={() => setFormData(p => ({ ...p, visitType: value as any }))}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs border-2 transition-all active:scale-95 ${
-                      formData.visitType === value
-                        ? 'bg-[#064E3B] text-white border-[#064E3B] shadow-sm'
-                        : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                    }`}>
-                    <Icon className="w-4 h-4" strokeWidth={2} />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* ── ROW 2, COL 1 — পণ্য নির্বাচন ── */}
-          <div className={`${card} order-3`}>
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                 <ShoppingBag className="w-4 h-4 text-blue-500" strokeWidth={2.5} />
@@ -299,63 +321,114 @@ export function SubmitPrice() {
             </div>
 
             {loadingProducts ? (
-              <div className="h-11 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-12 bg-slate-100 rounded-xl animate-pulse" />
             ) : (
-              <>
-                <select value={formData.productId}
-                  onChange={(e) => setFormData(p => ({ ...p, productId: e.target.value }))}
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 text-slate-700 font-semibold text-sm transition-all">
-                  <option value="">পণ্য বেছে নিন</option>
-                  {products.map((p: any) => (
-                    <option key={p._id} value={p._id}>{p.icon} {p.nameBn || p.name} ({p.unit})</option>
-                  ))}
-                </select>
-
-                {selectedProduct && (
-                  <div className="mt-3 flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <span className="text-xs font-semibold text-blue-700">
-                      {selectedProduct.icon} {selectedProduct.nameBn || selectedProduct.name} · {selectedProduct.unit}
+              <div className="relative">
+                <button type="button" onClick={() => setProductDropdownOpen(o => !o)}
+                  className="w-full flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 active:scale-[0.99] transition-transform">
+                  {selectedProduct && (
+                    <span className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-slate-200 flex items-center justify-center text-base shrink-0">
+                      {selectedProduct.image
+                        ? <img src={selectedProduct.image} alt={selectedProduct.nameBn || selectedProduct.name} className="w-full h-full object-cover" />
+                        : (selectedProduct.icon || '🛒')}
                     </span>
-                  </div>
+                  )}
+                  <span className="flex-1 min-w-0 text-left">
+                    {selectedProduct ? (
+                      <span className="block text-sm font-semibold text-slate-700 truncate">
+                        {selectedProduct.nameBn || selectedProduct.name} ({unitLabel(selectedProduct.unit)})
+                      </span>
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-400">পণ্য বেছে নিন</span>
+                    )}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${productDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {productDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setProductDropdownOpen(false)} />
+                    <div className="absolute left-0 right-0 top-full mt-2 z-40 bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
+                      <div className="relative p-2 border-b border-slate-100">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input type="text" value={productSearch} autoFocus
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          placeholder="পণ্য খুঁজুন..."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 text-sm outline-none focus:border-emerald-400" />
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {filteredProducts.length === 0 ? (
+                          <p className="text-center text-xs text-slate-400 py-4">কোনো পণ্য পাওয়া যায়নি</p>
+                        ) : filteredProducts.map((p: any) => (
+                          <button key={p._id} type="button"
+                            onClick={() => { setFormData(f => ({ ...f, productId: p._id })); setProductDropdownOpen(false); setProductSearch(''); }}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left">
+                            <span className="w-9 h-9 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center text-lg shrink-0">
+                              {p.image
+                                ? <img src={p.image} alt={p.nameBn || p.name} className="w-full h-full object-cover" />
+                                : (p.icon || '🛒')}
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <span className="block text-sm font-semibold text-slate-700 truncate">{p.nameBn || p.name}</span>
+                              <span className="block text-[11px] text-slate-400">{unitLabel(p.unit)}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
 
-          {/* ── MOBILE ONLY — কোথা থেকে দেখেছেন (order-4, after পণ্য) ── */}
-          <div className={`${card} order-4 lg:hidden`}>
-            <p className="font-bold text-slate-700 text-sm mb-3">কোথা থেকে দেখেছেন?</p>
-            <div className="flex gap-2.5">
-              {[
-                { value: 'physical', Icon: Store, label: 'সরাসরি বাজার' },
-                { value: 'online',   Icon: Smartphone, label: 'অনলাইন' },
-              ].map(({ value, Icon, label }) => (
-                <button key={value} type="button"
-                  onClick={() => setFormData(p => ({ ...p, visitType: value as any }))}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs border-2 transition-all active:scale-95 ${
-                    formData.visitType === value
-                      ? 'bg-[#064E3B] text-white border-[#064E3B] shadow-sm'
-                      : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-slate-300'
-                  }`}>
-                  <Icon className="w-4 h-4" strokeWidth={2} />
-                  {label}
-                </button>
-              ))}
+          {/* ── দাম লিখুন (full width) ── */}
+          <div className={`${card} order-3 lg:col-span-2`}>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-xl bg-slate-800 flex items-center justify-center shrink-0">
+                <span className="text-white font-extrabold text-sm leading-none">৳</span>
+              </div>
+              <div>
+                <p className="font-bold text-slate-800 text-sm leading-none">দাম লিখুন</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">প্রতি ইউনিটের দাম দিন</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-slate-300 select-none pointer-events-none">৳</span>
+                <input type="number" value={formData.price}
+                  onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
+                  placeholder="0.00" min="0" step="0.01" required inputMode="decimal"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-3 py-3.5 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 text-slate-900 font-black text-2xl tracking-tight transition-all" />
+              </div>
+              <div className="relative shrink-0">
+                <select value={formData.unit}
+                  onChange={(e) => setFormData(p => ({ ...p, unit: e.target.value }))}
+                  className="appearance-none bg-slate-50 border border-slate-200 rounded-xl pl-3 pr-8 py-3.5 text-sm font-bold text-slate-600 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 transition-all cursor-pointer whitespace-nowrap">
+                  {Object.entries(UNIT_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>প্রতি {label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 mt-2.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <p className="text-[11px] text-slate-400 font-medium">ইঙ্গিতঃ প্রতি কেজি, প্রতি লিটার, প্রতি পিস</p>
             </div>
           </div>
 
-          {/* ── ROW 2, COL 2 — প্রমাণ ছবি ── */}
-          <div className={`${card} order-5`}>
+          {/* ── প্রমাণ ছবি ── */}
+          <div className={`${card} order-4`}>
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
                 <Camera className="w-4 h-4 text-violet-500" strokeWidth={2.5} />
               </div>
               <div>
                 <p className="font-bold text-slate-800 text-sm leading-none">
-                  প্রমাণ ছবি
-                  <span className="ml-2 text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full align-middle">ঐচ্ছিক</span>
+                  প্রমাণ ছবি <span className="text-slate-400 font-semibold">(ঐচ্ছিক)</span>
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">দামের প্রমাণ হিসেবে ব্যবহার হবে</p>
               </div>
@@ -383,14 +456,27 @@ export function SubmitPrice() {
             <input ref={photoInputRef} type="file" accept="image/*" capture="environment"
               onChange={handlePhotoSelect} className="hidden" />
           </div>
-        </div>
 
-        {/* ── Info strip ── */}
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-2xl px-4 py-3 mb-4">
-          <span className="text-base shrink-0">💡</span>
-          <p className="text-xs text-slate-600 font-medium leading-relaxed">
-            আপনার তথ্য কমিউনিটি যাচাই করবে। সঠিক হলে <span className="font-bold text-amber-700">পয়েন্ট</span> পাবেন এবং বাজার দর আপডেট হবে।
-          </p>
+          {/* ── নোট (ঐচ্ছিক) ── */}
+          <div className={`${card} order-5`}>
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4 text-slate-500" strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800 text-sm leading-none">
+                  নোট <span className="text-slate-400 font-semibold">(ঐচ্ছিক)</span>
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">অতিরিক্ত তথ্য যোগ করুন</p>
+              </div>
+            </div>
+
+            <textarea value={formData.note}
+              onChange={(e) => setFormData(p => ({ ...p, note: e.target.value.slice(0, 100) }))}
+              placeholder="কিছু লিখুন..." rows={3} maxLength={100}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/10 text-sm text-slate-700 resize-none transition-all" />
+            <p className="text-right text-[11px] text-slate-400 mt-1">{formData.note.length}/100</p>
+          </div>
         </div>
 
         {/* ── Submit button ── */}
@@ -399,7 +485,7 @@ export function SubmitPrice() {
           {isSubmitting ? (
             <span className="animate-pulse">সাবমিট হচ্ছে...</span>
           ) : (
-            <><CheckCircle2 className="w-5 h-5" /> দাম সাবমিট করুন</>
+            <><CheckCircle2 className="w-5 h-5" /> দাম যোগ করুন</>
           )}
         </button>
       </form>
