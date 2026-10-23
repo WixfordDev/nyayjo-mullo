@@ -13,19 +13,14 @@ const usersData = [
     password: '1qazxsw2',
     role: 'admin',
   },
-  {
-    fullName: 'Testing Employee',
-    email: 'employee@gmail.com',
-    phoneNumber: '01735566789',
-    password: '1qazxsw2',
-    role: 'employee',
-  },
+ 
   {
     fullName: 'Testing Client',
-    email: 'client@gmail.com',
+    email: 'user@gmail.com',
     phoneNumber: '01734456873',
-    password: '1qazxsw2',
-    role: 'client',
+    password: '$2a$08$XGuVWxMWzFykDBo7p/WD4eJljVPdtnCTEwPJdSKI74Bs2hT0S/30O',
+    role: 'user',
+    isEmailVerified: true,
   },
 ];
 

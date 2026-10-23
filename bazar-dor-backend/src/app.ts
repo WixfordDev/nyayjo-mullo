@@ -6,7 +6,7 @@ import compression from 'compression';
 import cors from 'cors';
 import passport from 'passport';
 import httpStatus from 'http-status';
-import status from 'express-status-monitor';
+// import status from 'express-status-monitor';
 import config from './config/config';
 import morgan from './config/morgan';
 import { jwtStrategy } from './config/passport';
@@ -57,8 +57,8 @@ if (config.env === 'production') {
   app.use('/v1/auth', authLimiter);
 }
 
-// Express Monitor
-app.use(status());
+// Express Monitor — disabled: pidusage shells out to wmic, which newer Windows builds removed
+// app.use(status());
 
 // v1 api routes
 app.use('/api/v1', routes);

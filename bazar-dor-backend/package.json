@@ -1,7 +1,7 @@
 {
-  "name": "spotlyt-task-server",
+  "name": "nayjjomullo-server",
   "version": "1.0.0",
-  "description": "Spotlyt Task Server",
+  "description": "Nayjjomullo Server",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

@@ -351,6 +351,11 @@ const getHomeSummary = async (params: {
       : null;
     const change = todayAvg !== null && prevPrice !== null ? todayAvg - prevPrice : null;
 
+    const lastSubmittedAt = (item.allEntries as any[]).reduce(
+      (latest: Date, e: any) => (new Date(e.createdAt) > latest ? new Date(e.createdAt) : latest),
+      new Date(0),
+    );
+
     return {
       productId:    item._id,
       name:         item.product.name,
@@ -366,8 +371,12 @@ const getHomeSummary = async (params: {
       bazarName:    item.bazar?.nameBn || item.bazar?.name || null,
       isVerified:   item.bestIsVerified,
       updatedToday: todayEntries.length > 0,
+      lastSubmittedAt,
     };
   });
+
+  // Most recently submitted product (near the user / selected bazar) first
+  products.sort((a, b) => b.lastSubmittedAt.getTime() - a.lastSubmittedAt.getTime());
 
   // ── 4. Basket totals ──────────────────────────────────────────────────────
   let basketTotal = 0;
