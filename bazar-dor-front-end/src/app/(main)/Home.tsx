@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   MapPin, TrendingDown, TrendingUp, Search,
   ArrowRight, ChevronRight, ChevronDown, RefreshCw,
-  ShoppingBag, BarChart2, Zap, MoreHorizontal,
+  ShoppingBag, BarChart2, Zap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -15,6 +15,7 @@ import {
 import { useGetBazarsQuery, useGetNearbyBazarsQuery } from '../../store/api/bazarApi';
 import { useGetAlertsQuery } from '../../store/api/alertApi';
 import { useGetHomeSummaryQuery } from '../../store/api/priceApi';
+import { useGetProductsQuery } from '../../store/api/productApi';
 import { useUserLocation } from '../../hooks/useUserLocation';
 import { distanceKm, formatDistance } from '../../lib/distance';
 
@@ -55,6 +56,10 @@ export function Home() {
   const stats    = summary?.stats    ?? { totalProducts: 0, updatedToday: 0, basketTotal: null, basketChange: null, savings: null };
   const products = summary?.products ?? [];
 
+  // ── Full product catalog (for "দ্রুত দেখুন" — shows every added product) ──
+  const { data: catalogRes, isLoading: loadingCatalog } = useGetProductsQuery({ limit: 100 });
+  const catalogProducts = catalogRes?.data?.attributes?.data || [];
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   const sortedBazars = userLocation
     ? [...bazars].sort((a: any, b: any) =>
@@ -68,14 +73,13 @@ export function Home() {
   const goToMarketIndex = () =>
     router.push(`/market-index${selectedBazarId ? `?bazar_id=${selectedBazarId}` : ''}`);
 
+  // products is already sorted by most-recently-submitted (backend), scoped to nearby/selected bazar
   const filteredProducts = searchQuery
     ? products.filter((p: any) =>
         p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.nameBn?.includes(searchQuery)
       )
     : products;
-
-  const quickViewProducts = products.slice(0, 6);
 
   // Mini trend for the index widget (from basket history via snapshots — simplified)
   const miniTrendData = products
@@ -209,7 +213,7 @@ export function Home() {
               </Link>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-              {loadingProducts ? (
+              {loadingCatalog ? (
                 [...Array(5)].map((_, i) => (
                   <div key={i} className="flex flex-col items-center gap-1 shrink-0">
                     <div className="w-14 h-14 rounded-2xl bg-slate-100 animate-pulse" />
@@ -217,11 +221,11 @@ export function Home() {
                   </div>
                 ))
               ) : (
-                quickViewProducts.map((p: any) => (
+                catalogProducts.map((p: any) => (
                   <button
-                    key={p.productId}
+                    key={p._id}
                     type="button"
-                    onClick={() => router.push(`/products/${p.productId}`)}
+                    onClick={() => router.push(`/products/${p._id}`)}
                     className="flex flex-col items-center gap-1 shrink-0"
                   >
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-2 bg-white border-slate-100 overflow-hidden active:scale-95 transition-transform">
@@ -235,12 +239,6 @@ export function Home() {
                   </button>
                 ))
               )}
-              <Link href="/products" className="flex flex-col items-center gap-1 shrink-0">
-                <div className="w-14 h-14 rounded-2xl bg-slate-50 border-2 border-slate-100 flex items-center justify-center text-slate-400">
-                  <MoreHorizontal className="w-6 h-6" strokeWidth={2} />
-                </div>
-                <span className="text-[11px] font-medium text-slate-500">সব পণ্য</span>
-              </Link>
             </div>
           </div>
 
@@ -316,7 +314,7 @@ export function Home() {
               <p className="text-sm font-medium">
                 {selectedBazarId
                   ? 'এই বাজারে এখনো কোনো দাম সাবমিট হয়নি'
-                  : 'গত ৭ দিনে কোনো দাম সাবমিট হয়নি'}
+                  : 'কাছের কোনো বাজারে এখনো দাম সাবমিট হয়নি'}
               </p>
             </div>
           ) : (
