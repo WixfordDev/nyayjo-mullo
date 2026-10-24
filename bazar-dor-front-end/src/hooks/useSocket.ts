@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
 const SOCKET_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || "http://192.168.0.124:3030";
+  process.env.NEXT_PUBLIC_SOCKET_URL || "http://192.168.0.124:3032";
 
 let socket: Socket | null = null;
 

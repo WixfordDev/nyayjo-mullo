@@ -27,7 +27,7 @@ export function AdminBazars() {
   const [page, setPage]                       = useState(1);
   const limit = 15;
 
-  const { data: res, isLoading } = useGetBazarsQuery({ limit, page });
+  const { data: res, isLoading } = useGetBazarsQuery({ limit, page, includeInactive: true });
   const [createBazar, { isLoading: creating }] = useCreateBazarMutation();
   const [updateBazar, { isLoading: updating }] = useUpdateBazarMutation();
   const [deleteBazar, { isLoading: deleting }] = useDeleteBazarMutation();

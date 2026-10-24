@@ -92,7 +92,9 @@ export function ProductDetail({ productId }: { productId: string }) {
   const reliability     = totalVotesAll > 0 ? Math.round((totalUpvotesAll / totalVotesAll) * 100) : 100;
 
   const latestEntry = [...allPrices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-  const repEntry     = [...todayPrices].sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))[0] ?? latestEntry;
+  // "current price" = most recently submitted entry, not just the most-upvoted one —
+  // matches the same recency-first rule used in price.service.ts's getHomeSummary.
+  const repEntry     = [...todayPrices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] ?? latestEntry;
   const repVotes     = repEntry ? (repEntry.upvotes || 0) + (repEntry.downvotes || 0) : 0;
 
   /* per-bazar latest price */
