@@ -25,9 +25,15 @@ const createBazar = async (data: any) => {
 
 const queryBazars = async (filter: any, options: any) => {
   const { limit = 20, page = 1 } = options;
-  const { search, ...exactFilter } = filter;
+  const { search, includeInactive, ...exactFilter } = filter;
 
   const mongoFilter: any = { ...exactFilter };
+  // Public callers (Home/Heatmap/Planner/AllProducts location-fallback search) never pass
+  // `isActive` explicitly, so default to active-only — matches getNearbyBazars' behavior.
+  // Admin management explicitly passes `includeInactive` to see everything.
+  if (mongoFilter.isActive === undefined && !includeInactive) {
+    mongoFilter.isActive = true;
+  }
   if (search) {
     mongoFilter.$or = [
       { name:   { $regex: search, $options: 'i' } },

@@ -18,7 +18,7 @@ const createBazar = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getBazars = catchAsync(async (req: Request, res: Response) => {
-  const filter = pick(req.query, ['name', 'area', 'city', 'isActive', 'search']);
+  const filter = pick(req.query, ['name', 'area', 'city', 'isActive', 'search', 'includeInactive']);
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await bazarService.queryBazars(filter, options);
   res.status(httpStatus.OK).json(

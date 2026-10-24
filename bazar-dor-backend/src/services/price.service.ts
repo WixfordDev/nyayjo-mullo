@@ -295,8 +295,9 @@ const getHomeSummary = async (params: {
         ...bazarFilter,
       },
     },
-    // Sort so $first picks the best-upvoted entry per product
-    { $sort: { upvotes: -1, createdAt: -1 } },
+    // Sort so $first picks the most recently submitted entry per product —
+    // "current price" should mean the latest report, not just the most-upvoted one.
+    { $sort: { createdAt: -1 } },
     {
       $group: {
         _id:            '$productId',

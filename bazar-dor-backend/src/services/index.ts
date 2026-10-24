@@ -8,5 +8,6 @@ import * as bazarService from './bazar.service';
 import * as priceService from './price.service';
 import * as alertService from './alert.service';
 import * as osmPlacesService from './osmPlaces.service';
+import * as shoppingListService from './shoppingList.service';
 
-export { authService, emailService, tokenService, userService, tasksService, productService, bazarService, priceService, alertService, osmPlacesService };
+export { authService, emailService, tokenService, userService, tasksService, productService, bazarService, priceService, alertService, osmPlacesService, shoppingListService };

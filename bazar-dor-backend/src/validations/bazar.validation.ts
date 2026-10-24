@@ -19,6 +19,7 @@ const getBazars = {
     area: Joi.string(),
     city: Joi.string(),
     isActive: Joi.boolean(),
+    includeInactive: Joi.boolean(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),

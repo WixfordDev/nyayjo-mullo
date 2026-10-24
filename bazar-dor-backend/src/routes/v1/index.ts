@@ -9,6 +9,7 @@ import bazarRoute from './bazar.routes';
 import priceRoute from './price.routes';
 import alertRoute from './alert.routes';
 import dailySnapshotRoute from './dailySnapshot.routes';
+import shoppingListRoute from './shoppingList.routes';
 
 const router = express.Router();
 
@@ -44,6 +45,10 @@ const defaultRoutes: { path: string; route: any }[] = [
   {
     path: '/daily-snapshots',
     route: dailySnapshotRoute,
+  },
+  {
+    path: '/shopping-lists',
+    route: shoppingListRoute,
   },
 ];
 
